@@ -63,7 +63,6 @@ const addUser =  function(user) {
     VALUES ($1, $2, $3)
     RETURNING *;`,[user.name, user.email, user.password])
     .then((result) => {
-      console.log(result.rows[0]);
       return result.rows[0];
     })
     .catch((err) => {
@@ -82,14 +81,15 @@ exports.addUser = addUser;
 const getAllReservations = function(guest_id, limit = 10) {
   return pool
     .query(`
-    SELECT properties.* FROM properties
+    SELECT properties.*, avg(property_reviews.rating) as average_rating 
+    FROM properties
+    JOIN property_reviews ON properties.id = property_id
     JOIN reservations ON reservations.property_id = properties.id
     WHERE reservations.guest_id = $1
     GROUP BY properties.id, reservations.id
     ORDER BY reservations.start_date
     LIMIT $2;`, [guest_id, limit])
     .then((result) => {
-      console.log(result.rows);
       return result.rows;
     })
     .catch((err) => {
@@ -147,10 +147,6 @@ const getAllProperties = function (options, limit = 10) {
   LIMIT $${queryParams.length};
   `;
 
-  // 5
-  console.log(queryString, queryParams);
-
-  // 6
   return pool.query(queryString, queryParams).then((res) => res.rows);
 };
 
@@ -158,7 +154,7 @@ exports.getAllProperties = getAllProperties;
 
 
 /**
- * Add a property to the database
+ * Add a property to the database, all values cannot be null
  * @param {{}} property An object containing all of the property details.
  * @return {Promise<{}>} A promise to the property.
  */
