@@ -112,21 +112,22 @@ const getAllProperties = function (options, limit = 10) {
 
   const queryParams = [];
 
+  //WHERE 1=1 creates a true first condition, any or all options will start with AND
   let queryString = `
   SELECT properties.*, avg(property_reviews.rating) as average_rating
   FROM properties
   JOIN property_reviews ON properties.id = property_id
+  WHERE 1 = 1
   `;
 
   if (options.city) {
     queryParams.push(`%${options.city}%`);
-    queryString += `WHERE city LIKE $${queryParams.length} `;
+    queryString += `AND city LIKE $${queryParams.length} `;
   }
 
   if (options.owner_id) {
     queryParams.push(`${options.owner_id}`);
-    //if queryParams.length > 1, a WHERE statement already exists, uses AND instead.
-    queryString += (queryParams.length > 1? `AND owner_id = $${queryParams.length} `: `WHERE owner_id = $${queryParams.length} `)
+    queryString += (`AND owner_id = $${queryParams.length} `)
   }
 
   //price listing in DB is in CENTS
@@ -135,19 +136,26 @@ const getAllProperties = function (options, limit = 10) {
     //If user queried in dollars, convert it to cents, which the DB can read
     let minPriceInDollar = options.minimum_price_per_night * 100;
     queryParams.push(`${minPriceInDollar}`);
-    queryString += (queryParams.length > 1? `AND cost_per_night > $${queryParams.length} `:`WHERE cost_per_night > $${queryParams.length} `)
+    queryString += (`AND cost_per_night > $${queryParams.length} `)
   }
 
   if (options.maximum_price_per_night) {
 
     let maxPriceInDollar = options.maximum_price_per_night * 100;
     queryParams.push(`${maxPriceInDollar}`);
-    queryString += (queryParams.length > 1? `AND cost_per_night < $${queryParams.length} `:`WHERE cost_per_night < $${queryParams.length} `)
+    queryString += (`AND cost_per_night < $${queryParams.length} `)
+  }
+
+  //GROUP BY must be before HAVING
+  queryString += `GROUP BY properties.id `;
+
+  if (options.minimum_rating) {
+    queryParams.push(`${options.minimum_rating}`);
+    queryString += (`HAVING AVG(property_reviews.rating) > $${queryParams.length} `)
   }
 
   queryParams.push(limit);
   queryString += `
-  GROUP BY properties.id
   ORDER BY cost_per_night
   LIMIT $${queryParams.length};
   `;
