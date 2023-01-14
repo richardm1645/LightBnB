@@ -131,12 +131,17 @@ const getAllProperties = function (options, limit = 10) {
 
   //price listing in DB is in CENTS
   if (options.minimum_price_per_night) {
-    queryParams.push(`${options.minimum_price_per_night}`);
+
+    //If user queried in dollars, convert it to cents, which the DB can read
+    let minPriceInDollar = options.minimum_price_per_night * 100;
+    queryParams.push(`${minPriceInDollar}`);
     queryString += (queryParams.length > 1? `AND cost_per_night > $${queryParams.length} `:`WHERE cost_per_night > $${queryParams.length} `)
   }
 
   if (options.maximum_price_per_night) {
-    queryParams.push(`${options.maximum_price_per_night}`);
+
+    let maxPriceInDollar = options.maximum_price_per_night * 100;
+    queryParams.push(`${maxPriceInDollar}`);
     queryString += (queryParams.length > 1? `AND cost_per_night < $${queryParams.length} `:`WHERE cost_per_night < $${queryParams.length} `)
   }
 
